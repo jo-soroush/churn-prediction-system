@@ -1,0 +1,72 @@
+{
+  "target_column": "churn",
+  "feature_columns": [
+    "gender",
+    "seniorcitizen",
+    "partner",
+    "dependents",
+    "tenure",
+    "phoneservice",
+    "multiplelines",
+    "internetservice",
+    "onlinesecurity",
+    "onlinebackup",
+    "deviceprotection",
+    "techsupport",
+    "streamingtv",
+    "streamingmovies",
+    "contract",
+    "paperlessbilling",
+    "paymentmethod",
+    "monthlycharges",
+    "totalcharges"
+  ],
+  "numeric_features": [
+    "seniorcitizen",
+    "tenure",
+    "monthlycharges"
+  ],
+  "categorical_features": [
+    "gender",
+    "partner",
+    "dependents",
+    "phoneservice",
+    "multiplelines",
+    "internetservice",
+    "onlinesecurity",
+    "onlinebackup",
+    "deviceprotection",
+    "techsupport",
+    "streamingtv",
+    "streamingmovies",
+    "contract",
+    "paperlessbilling",
+    "paymentmethod",
+    "totalcharges"
+  ],
+  "drop_columns": [
+    "customerid",
+    "churn"
+  ],
+  "tree_feature_names": [
+    "seniorcitizen",
+    "tenure",
+    "monthlycharges",
+    "gender",
+    "partner",
+    "dependents",
+    "phoneservice",
+    "multiplelines",
+    "internetservice",
+    "onlinesecurity",
+    "onlinebackup",
+    "deviceprotection",
+    "techsupport",
+    "streamingtv",
+    "streamingmovies",
+    "contract",
+    "paperlessbilling",
+    "paymentmethod",
+    "totalcharges"
+  ]
+}

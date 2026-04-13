@@ -1,0 +1,24 @@
+Phase 3 - TotalCharges Cleaning Decision
+
+1) Final dtype
+TotalCharges must be numeric
+
+2) Cleaning rule
+- strip whitespace
+- treat blank/whitespace-only values as invalid
+
+3) Conversion rule
+pd.to_numeric(..., errors="coerce")
+
+4) Invalid value representation
+NaN
+
+5) Row handling
+Rows must be retained and handled via downstream imputation
+
+6) Schema implication
+- TotalCharges must be part of numerical features
+- must not be treated as categorical anymore
+
+7) Implementation note
+Cleaning must happen immediately after dataframe load and before feature typing

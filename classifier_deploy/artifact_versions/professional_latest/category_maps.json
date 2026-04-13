@@ -1,0 +1,88 @@
+{
+  "gender": {
+    "__UNK__": 0,
+    "Female": 1,
+    "Male": 2
+  },
+  "partner": {
+    "__UNK__": 0,
+    "No": 1,
+    "Yes": 2
+  },
+  "dependents": {
+    "__UNK__": 0,
+    "No": 1,
+    "Yes": 2
+  },
+  "phoneservice": {
+    "__UNK__": 0,
+    "No": 1,
+    "Yes": 2
+  },
+  "multiplelines": {
+    "__UNK__": 0,
+    "No": 1,
+    "No phone service": 2,
+    "Yes": 3
+  },
+  "internetservice": {
+    "__UNK__": 0,
+    "DSL": 1,
+    "Fiber optic": 2,
+    "No": 3
+  },
+  "onlinesecurity": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "onlinebackup": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "deviceprotection": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "techsupport": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "streamingtv": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "streamingmovies": {
+    "__UNK__": 0,
+    "No": 1,
+    "No internet service": 2,
+    "Yes": 3
+  },
+  "contract": {
+    "__UNK__": 0,
+    "Month-to-month": 1,
+    "One year": 2,
+    "Two year": 3
+  },
+  "paperlessbilling": {
+    "__UNK__": 0,
+    "No": 1,
+    "Yes": 2
+  },
+  "paymentmethod": {
+    "__UNK__": 0,
+    "Bank transfer (automatic)": 1,
+    "Credit card (automatic)": 2,
+    "Electronic check": 3,
+    "Mailed check": 4
+  }
+}

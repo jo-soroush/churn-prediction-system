@@ -1,0 +1,67 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      API_HOST: ${API_HOST:-0.0.0.0}
+      API_PORT: ${API_PORT:-8000}
+      API_WORKERS: ${API_WORKERS:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      METRICS_MULTIPROCESS_ENABLED: ${METRICS_MULTIPROCESS_ENABLED:-true}
+      PROMETHEUS_MULTIPROC_DIR: ${PROMETHEUS_MULTIPROC_DIR:-/tmp/prometheus-multiproc}
+      FEATURE_SCHEMA_PATH: ${FEATURE_SCHEMA_PATH:-artifacts/feature_schema.json}
+      TREE_PREPROCESSOR_PATH: ${TREE_PREPROCESSOR_PATH:-artifacts/tree_preprocessor.pkl}
+      XGB_MODEL_PATH: ${XGB_MODEL_PATH:-artifacts/xgb_model.json}
+      MLP_MODEL_PATH: ${MLP_MODEL_PATH:-artifacts/mlp_model.pt}
+      MLP_PREPROCESSOR_PATH: ${MLP_PREPROCESSOR_PATH:-artifacts/mlp_preprocessor.pkl}
+      CATEGORY_MAPS_PATH: ${CATEGORY_MAPS_PATH:-artifacts/category_maps.json}
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:${API_PORT:-8000}"
+    tmpfs:
+      - /tmp/prometheus-multiproc:mode=1777
+    volumes:
+      - ./artifacts/feature_schema.json:/app/artifacts/feature_schema.json:ro
+      - ./artifacts/model_metadata.json:/app/artifacts/model_metadata.json:ro
+      - ./artifacts/tree_preprocessor.pkl:/app/artifacts/tree_preprocessor.pkl:ro
+      - ./artifacts/xgb_model.json:/app/artifacts/xgb_model.json:ro
+      - ./artifacts/mlp_model.pt:/app/artifacts/mlp_model.pt:ro
+      - ./artifacts/mlp_preprocessor.pkl:/app/artifacts/mlp_preprocessor.pkl:ro
+      - ./artifacts/category_maps.json:/app/artifacts/category_maps.json:ro
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      FRONTEND_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://api:8000}
+    ports:
+      - "127.0.0.1:8501:8501"
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning/datasources/prometheus.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - ./docker/grafana/provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./docker/grafana/dashboards/api-overview.json:/var/lib/grafana/dashboards/api-overview.json:ro

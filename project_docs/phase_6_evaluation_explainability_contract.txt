@@ -1,0 +1,39 @@
+Phase 6 - Evaluation and Explainability Contract
+
+1) Evaluation metrics
+- accuracy
+- precision
+- recall
+- f1
+- roc_auc
+
+2) Evaluation flow
+- validation metrics are used for candidate ranking and model selection
+- test metrics are computed only after model selection
+- all evaluation outputs must be rebuilt after retraining
+
+3) Confusion matrices
+- must continue to be generated
+- must reflect post-selection evaluation, not tuning-only outputs
+
+4) Final comparison table
+- must be generated after retraining
+- must include RandomForest, XGBoost, and PyTorch MLP
+- must remain clearly separated from tuning outputs
+
+5) Feature importance
+- must be rebuilt after retraining
+- must remain available for RandomForest and XGBoost
+- must use tree_feature_names
+
+6) SHAP
+- must remain focused on XGBoost unless explicitly changed later
+- must be rebuilt after retraining
+- must use tree-preprocessed validation features
+
+7) Business/reporting implication
+- evaluation and explainability outputs must reflect corrected preprocessing
+- stale pre-correction outputs must not be used in final reporting
+
+8) Implementation note
+Phase 6 notebook edits only clarified section boundaries and evaluation/explainability flow. No metrics, model logic, preprocessing, or SHAP behavior were changed in this step.

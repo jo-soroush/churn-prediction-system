@@ -1,0 +1,39 @@
+Phase 5 - Retraining Contract
+
+1) Data split contract
+- preserve the current two-stage stratified split
+- preserve train / validation / test separation
+- keep the test split untouched during tuning and model selection
+
+2) Models to retrain
+- RandomForest baseline
+- XGBoost main tree model
+- PyTorch MLP main neural model
+
+3) XGBoost retraining
+- rerun candidate search after TotalCharges correction
+- preserve validation-based ranking
+- preserve early stopping on validation data
+
+4) MLP retraining
+- rerun candidate search after TotalCharges correction
+- preserve numeric imputation and scaling
+- preserve training-split-only category maps
+- preserve validation-based ranking
+
+5) RandomForest retraining
+- retrain as baseline with corrected preprocessing
+- recompute validation and test metrics
+
+6) Model selection
+- preserve validation-driven selection
+- rank candidates by roc_auc first, then f1
+- compute test metrics only after model selection
+
+7) Export implications
+- regenerate all exported artifacts after retraining
+- exported schema must reflect TotalCharges as numeric
+- exported category maps must not include TotalCharges
+
+8) Implementation note
+Phase 5 notebook edits only clarified and isolated the retraining flow for reproducible execution. No model logic or hyperparameters were changed in this step.

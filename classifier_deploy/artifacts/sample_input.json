@@ -1,0 +1,21 @@
+﻿{
+  "gender": "Female",
+  "seniorcitizen": 0,
+  "partner": "Yes",
+  "dependents": "No",
+  "tenure": 24,
+  "phoneservice": "Yes",
+  "multiplelines": "No",
+  "internetservice": "Fiber optic",
+  "onlinesecurity": "No",
+  "onlinebackup": "Yes",
+  "deviceprotection": "Yes",
+  "techsupport": "No",
+  "streamingtv": "Yes",
+  "streamingmovies": "No",
+  "contract": "One year",
+  "paperlessbilling": "Yes",
+  "paymentmethod": "Bank transfer (automatic)",
+  "monthlycharges": 79.9,
+  "totalcharges": 1917.6
+}

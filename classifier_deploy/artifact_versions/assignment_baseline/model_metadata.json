@@ -1,0 +1,70 @@
+{
+  "selection_protocol": {
+    "training_split": "train",
+    "selection_split": "validation",
+    "final_reporting_split": "test"
+  },
+  "baseline_model": {
+    "name": "RandomForestClassifier",
+    "test_metrics": {
+      "accuracy": 0.7849538679914834,
+      "precision": 0.6134185303514377,
+      "recall": 0.5133689839572193,
+      "f1": 0.5589519650655022,
+      "roc_auc": 0.833878426205792
+    }
+  },
+  "main_tree_model": {
+    "name": "XGBoost",
+    "validation_metrics": {
+      "accuracy": 0.7714691270404542,
+      "precision": 0.552,
+      "recall": 0.7379679144385026,
+      "f1": 0.631578947368421,
+      "roc_auc": 0.8386538014415251
+    },
+    "test_metrics": {
+      "accuracy": 0.7686302342086586,
+      "precision": 0.5452830188679245,
+      "recall": 0.7727272727272727,
+      "f1": 0.6393805309734514,
+      "roc_auc": 0.8461753080678913
+    },
+    "best_params": {
+      "max_depth": 3,
+      "learning_rate": 0.03,
+      "subsample": 0.85,
+      "colsample_bytree": 0.85,
+      "min_child_weight": 1
+    }
+  },
+  "main_neural_model": {
+    "name": "PyTorch MLP with embeddings",
+    "validation_metrics": {
+      "accuracy": 0.7885024840312278,
+      "precision": 0.589622641509434,
+      "recall": 0.6684491978609626,
+      "f1": 0.6265664160401002,
+      "roc_auc": 0.8326164457878013
+    },
+    "test_metrics": {
+      "accuracy": 0.7735982966643009,
+      "precision": 0.5617977528089888,
+      "recall": 0.6684491978609626,
+      "f1": 0.6105006105006106,
+      "roc_auc": 0.8353289932573821
+    },
+    "best_config": {
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "dropout": 0.25,
+      "learning_rate": 0.0007,
+      "batch_size": 512,
+      "weight_decay": 0.0001,
+      "epochs": 45,
+      "patience": 7
+    }
+  }
+}

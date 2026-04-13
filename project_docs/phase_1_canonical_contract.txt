@@ -1,0 +1,87 @@
+Phase 1 - Canonical Contract (Initial Accepted Version)
+
+1) Target column name
+churn
+
+2) Target label convention
+requires confirmation
+
+3) Full feature list
+gender
+seniorcitizen
+partner
+dependents
+tenure
+phoneservice
+multiplelines
+internetservice
+onlinesecurity
+onlinebackup
+deviceprotection
+techsupport
+streamingtv
+streamingmovies
+contract
+paperlessbilling
+paymentmethod
+monthlycharges
+totalcharges
+
+4) Categorical feature list
+gender
+partner
+dependents
+phoneservice
+multiplelines
+internetservice
+onlinesecurity
+onlinebackup
+deviceprotection
+techsupport
+streamingtv
+streamingmovies
+contract
+paperlessbilling
+paymentmethod
+
+5) Numerical feature list
+seniorcitizen
+tenure
+monthlycharges
+totalcharges
+
+6) Canonical feature order
+requires confirmation
+
+7) API prediction input fields
+gender: str
+seniorcitizen: int
+partner: str
+dependents: str
+tenure: float
+phoneservice: str
+multiplelines: str
+internetservice: str
+onlinesecurity: str
+onlinebackup: str
+deviceprotection: str
+techsupport: str
+streamingtv: str
+streamingmovies: str
+contract: str
+paperlessbilling: str
+paymentmethod: str
+monthlycharges: float
+totalcharges: float
+
+8) API prediction response fields
+model_name: str
+prediction: str
+probability: float
+
+9) Unresolved items requiring confirmation
+- exact target label mapping
+- canonical feature order
+- whether seniorcitizen should remain canonical numeric
+- exact semantic meaning of positive/negative prediction labels relative to churn
+- final authoritative schema source for training, artifacts, and API alignment

@@ -1,0 +1,61 @@
+Phase 2 - Cross-Environment Contract
+
+1) Supported environments
+- Google Colab
+- Windows local environment
+- macOS local environment
+
+2) Path handling contract
+- paths must be environment-agnostic
+- paths must be constructed with Path objects or equivalent cross-platform path handling
+- canonical notebook logic must avoid hardcoded single-environment roots such as /content as the only valid location
+- canonical notebook logic must avoid assuming Unix-only path layouts
+- canonical notebook logic must avoid assuming Windows-only path layouts
+- relative project paths and configurable data/artifact roots are the preferred direction
+
+3) Data ingestion contract
+- data ingestion must work in Colab, Windows, and macOS
+- Kaggle may remain a supported ingestion path
+- manual local file path input may remain a supported fallback
+- canonical ingestion must not require Colab-specific upload/download steps as the only path
+- canonical ingestion must not require /content-based storage as the only path
+- dataset resolution should produce one resolved dataset file path before downstream processing continues
+
+4) Runtime detection contract
+- runtime detection should distinguish Colab vs local execution
+- runtime detection should avoid assuming Colab by default
+- runtime-dependent behavior should be explicit and minimal
+- environment checks should be used only where needed for portable execution
+
+5) Device selection contract
+- PyTorch device selection must support CPU everywhere
+- accelerated execution should be used only when available
+- canonical logic must not assume CUDA is present
+- canonical logic must not treat CUDA-only selection as sufficient for all supported environments
+- cross-environment device selection for Colab, Windows, and macOS requires implementation
+
+6) Package installation contract
+- package requirements should be explicit for API and frontend environments
+- notebook execution should not depend on one environment's package installer behavior only
+- canonical notebook behavior should avoid assuming dynamic in-notebook installation is always acceptable
+- environment-specific installation logic, if kept, must be optional and environment-aware
+
+7) Notebook execution assumptions
+- the notebook must run in Colab, Windows, and macOS
+- the notebook must not assume /content exists
+- the notebook must not assume google.colab modules exist
+- the notebook must not assume Kaggle credentials are already configured in one specific location only
+- the notebook may detect environment and adapt behavior, but that behavior requires implementation
+- whether notebook execution should assume Jupyter/IPython as a hard requirement requires confirmation
+
+8) Unresolved items requiring confirmation
+- exact canonical data root
+- exact canonical artifact export root
+- exact local workflow for Windows and macOS dataset selection
+- whether Linux local notebook execution is explicitly in scope
+- whether Kaggle remains the primary ingestion path or becomes one supported option
+- whether dynamic package installation in the notebook remains acceptable
+- exact Python version policy outside Docker and notebook metadata
+- exact runtime detection strategy for Windows/macOS local execution
+- exact cross-platform device selection order, including Apple Silicon support
+- whether notebook execution should assume Jupyter/IPython as a hard requirement

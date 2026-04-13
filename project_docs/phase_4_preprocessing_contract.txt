@@ -1,0 +1,47 @@
+Phase 4 - Preprocessing Contract
+
+1) Numerical features
+seniorcitizen
+tenure
+monthlycharges
+totalcharges
+
+2) Categorical features
+gender
+partner
+dependents
+phoneservice
+multiplelines
+internetservice
+onlinesecurity
+onlinebackup
+deviceprotection
+techsupport
+streamingtv
+streamingmovies
+contract
+paperlessbilling
+paymentmethod
+
+3) Tree preprocessing
+- numeric: median imputation
+- categorical: missing fill + ordinal encoding
+- TotalCharges must be processed as numeric
+
+4) MLP preprocessing
+- numeric: median imputation + scaling
+- categorical: integer encoding via category maps
+- TotalCharges must be processed as numeric
+
+5) Category maps
+- created only for categorical features
+- must not include TotalCharges
+- must be based on training split
+
+6) Schema/export
+- numeric_features must include TotalCharges
+- categorical_features must not include TotalCharges
+- exported schema must reflect this split
+
+7) Implementation note
+No additional code changes were required in Phase 4 because the current notebook logic already satisfies the contract after Phase 3 cleaning.

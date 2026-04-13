@@ -1,0 +1,24 @@
+FROM python:3.12-slim@sha256:804ddf3251a60bbf9c92e73b7566c40428d54d0e79d3428194edf40da6521286
+
+WORKDIR /app
+
+RUN addgroup --system --gid 10001 appgroup \
+    && adduser --system --uid 10001 --ingroup appgroup appuser
+
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.11.0
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+COPY app/ app/
+COPY docker/entrypoint.api.sh /app/docker/entrypoint.api.sh
+RUN mkdir -p /app/artifacts \
+    && chmod +x /app/docker/entrypoint.api.sh
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.getenv(\"API_PORT\", \"8000\")}/health', timeout=5).read()"
+
+ENTRYPOINT ["/app/docker/entrypoint.api.sh"]
+CMD ["sh", "-c", "uvicorn app.main:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000} --log-level ${LOG_LEVEL:-info} --workers ${API_WORKERS:-1}"]

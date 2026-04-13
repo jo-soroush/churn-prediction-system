@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+prometheus-client
+pydantic
+pydantic-settings
+sqlalchemy
+pandas==3.0.2
+joblib==1.5.3
+numpy==2.4.4
+scikit-learn==1.6.1
+xgboost==3.2.0
+shap==0.51.0
+pytest
+httpx
