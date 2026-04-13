@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  assignment-2-tests:
+    name: Assignment 2 Automated Test Baseline
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: assignments/assignment_2/classifier_deploy
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: assignments/assignment_2/classifier_deploy/requirements-lock.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -r requirements-api.txt -r requirements-frontend.txt
+
+      - name: Audit Python dependencies (non-blocking)
+        run: |
+          python -m pip install pip-audit
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::pip-audit could not be installed. This visibility step is non-blocking."
+            exit 0
+          }
+
+          python -m pip_audit -r requirements-lock.txt
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::pip-audit reported findings or could not complete. This visibility step is non-blocking."
+            exit 0
+          }
+
+      - name: Run deterministic test baseline
+        run: python -m pytest tests/test_schema_consistency.py tests/test_artifacts.py::test_required_artifact_files_exist tests/test_artifact_integrity.py
+
+  assignment-2-container-validation:
+    name: Assignment 2 Container Validation
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: assignments/assignment_2/classifier_deploy
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker version
+        run: docker version
+
+      - name: Build API image
+        run: docker build --file docker/Dockerfile.api --tag assignment2-api:ci .
+
+      - name: Build frontend image
+        run: docker build --file docker/Dockerfile.frontend --tag assignment2-frontend:ci .
+
+      - name: Start API release candidate
+        run: |
+          set -euo pipefail
+          docker rm --force assignment2-api-candidate 2>/dev/null || true
+
+          docker run --detach \
+            --name assignment2-api-candidate \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            --publish 127.0.0.1:8000:8000 \
+            --env API_HOST=0.0.0.0 \
+            --env API_PORT=8000 \
+            --env API_WORKERS=1 \
+            --env LOG_LEVEL=info \
+            --env METRICS_ENABLED=true \
+            --env METRICS_MULTIPROCESS_ENABLED=true \
+            --env PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc \
+            --tmpfs /tmp/prometheus-multiproc:mode=1777 \
+            --volume "$PWD/artifacts:/app/artifacts:ro" \
+            assignment2-api:ci
+
+      - name: Wait for API readiness
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:8000/health > /tmp/assignment2-health.json; then
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "API did not become ready within the smoke-check window."
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+      - name: Verify API release candidate
+        run: |
+          set -euo pipefail
+
+          curl --fail-with-body http://127.0.0.1:8000/health
+          curl --fail-with-body \
+            --header "Content-Type: application/json" \
+            --data @artifacts/sample_input.json \
+            http://127.0.0.1:8000/predict/tree
+          curl --fail-with-body \
+            --header "Content-Type: application/json" \
+            --data @artifacts/sample_input.json \
+            http://127.0.0.1:8000/predict/mlp
+
+      - name: Validate API metrics output
+        run: |
+          set -euo pipefail
+
+          curl --fail-with-body http://127.0.0.1:8000/metrics --output /tmp/assignment2-metrics.txt
+          grep '^api_requests_total' /tmp/assignment2-metrics.txt
+          grep 'endpoint="/health"' /tmp/assignment2-metrics.txt
+          grep 'endpoint="/predict/tree"' /tmp/assignment2-metrics.txt
+          grep 'endpoint="/predict/mlp"' /tmp/assignment2-metrics.txt
+          grep '^api_request_duration_seconds_count' /tmp/assignment2-metrics.txt
+          grep '^api_response_status_total' /tmp/assignment2-metrics.txt
+          grep '^model_inference_requests_total' /tmp/assignment2-metrics.txt
+          grep 'model="tree"' /tmp/assignment2-metrics.txt
+          grep 'model="mlp"' /tmp/assignment2-metrics.txt
+          grep '^model_inference_duration_seconds_count' /tmp/assignment2-metrics.txt
+
+      - name: Show API release candidate logs
+        if: always()
+        run: docker logs --tail 120 assignment2-api-candidate || true
+
+      - name: Stop API release candidate
+        if: always()
+        run: docker rm --force assignment2-api-candidate || true
