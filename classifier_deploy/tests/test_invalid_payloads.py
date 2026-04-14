@@ -23,11 +23,11 @@ def _load_invalid_payload() -> dict[str, object]:
 
 
 @pytest.mark.parametrize("path", ["/predict/tree", "/api/v1/predict/tree"])
-def test_predict_tree_invalid_payload_returns_validation_error(path: str) -> None:
+def test_predict_tree_invalid_payload_returns_validation_error(path: str, auth_headers: dict[str, str]) -> None:
     invalid_payload = _load_invalid_payload()
 
     with TestClient(app) as client:
-        response = client.post(path, json=invalid_payload)
+        response = client.post(path, json=invalid_payload, headers=auth_headers)
 
     assert response.status_code == 422
 
@@ -41,11 +41,11 @@ def test_predict_tree_invalid_payload_returns_validation_error(path: str) -> Non
 
 
 @pytest.mark.parametrize("path", ["/predict/mlp", "/api/v1/predict/mlp"])
-def test_predict_mlp_invalid_payload_returns_validation_error(path: str) -> None:
+def test_predict_mlp_invalid_payload_returns_validation_error(path: str, auth_headers: dict[str, str]) -> None:
     invalid_payload = _load_invalid_payload()
 
     with TestClient(app) as client:
-        response = client.post(path, json=invalid_payload)
+        response = client.post(path, json=invalid_payload, headers=auth_headers)
 
     assert response.status_code == 422
 

@@ -65,17 +65,17 @@ def _assert_metadata_payload(payload: dict[str, object]) -> None:
     assert "test_metrics" not in metadata_text
 
 
-def test_metadata_returns_expected_shape() -> None:
+def test_metadata_returns_expected_shape(auth_headers: dict[str, str]) -> None:
     with TestClient(app) as client:
-        response = client.get("/metadata")
+        response = client.get("/metadata", headers=auth_headers)
 
     assert response.status_code == 200
     _assert_metadata_payload(response.json())
 
 
-def test_metadata_v1_returns_expected_shape() -> None:
+def test_metadata_v1_returns_expected_shape(auth_headers: dict[str, str]) -> None:
     with TestClient(app) as client:
-        response = client.get("/api/v1/metadata")
+        response = client.get("/api/v1/metadata", headers=auth_headers)
 
     assert response.status_code == 200
     _assert_metadata_payload(response.json())

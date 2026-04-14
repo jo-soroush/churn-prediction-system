@@ -36,11 +36,11 @@ def _load_payload() -> dict[str, object]:
 
 
 @pytest.mark.parametrize("path", ["/predict/tree", "/api/v1/predict/tree"])
-def test_predict_tree_returns_transitional_contract(path: str) -> None:
+def test_predict_tree_returns_transitional_contract(path: str, auth_headers: dict[str, str]) -> None:
     payload = _load_payload()
 
     with TestClient(app) as client:
-        response = client.post(path, json=payload)
+        response = client.post(path, json=payload, headers=auth_headers)
 
     assert response.status_code == 200
 
@@ -116,7 +116,10 @@ class _FakeExplanation:
         self.values = values
 
 
-def test_predict_tree_explanation_uses_top_k_and_direction_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_predict_tree_explanation_uses_top_k_and_direction_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+    auth_headers: dict[str, str],
+) -> None:
     payload = _load_payload()
 
     with TestClient(app) as client:
@@ -131,7 +134,7 @@ def test_predict_tree_explanation_uses_top_k_and_direction_mapping(monkeypatch: 
         monkeypatch.setattr(predict_module, "tree_shap_explainer", _FakeExplainer())
         monkeypatch.setattr(predict_module, "tree_shap_status_message", None)
 
-        response = client.post("/predict/tree", json=payload)
+        response = client.post("/predict/tree", json=payload, headers=auth_headers)
 
     assert response.status_code == 200
     explanation = response.json()["explanation"]
@@ -151,6 +154,7 @@ def test_predict_tree_explanation_uses_top_k_and_direction_mapping(monkeypatch: 
 
 def test_predict_tree_returns_honest_unavailable_explanation_when_explainer_is_missing(
     monkeypatch: pytest.MonkeyPatch,
+    auth_headers: dict[str, str],
 ) -> None:
     payload = _load_payload()
 
@@ -162,7 +166,7 @@ def test_predict_tree_returns_honest_unavailable_explanation_when_explainer_is_m
             "Tree SHAP explainability is unavailable because the runtime explainer is not initialized.",
         )
 
-        response = client.post("/predict/tree", json=payload)
+        response = client.post("/predict/tree", json=payload, headers=auth_headers)
 
     assert response.status_code == 200
     explanation = response.json()["explanation"]

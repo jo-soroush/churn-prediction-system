@@ -7,11 +7,12 @@ from uuid import uuid4
 import joblib
 import torch
 import uvicorn
-from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from xgboost import XGBClassifier
 
+from app.auth import require_api_key
 from app.config import settings
 from app.logging_config import configure_logging, get_logger
 from app.metrics import build_metrics_payload, normalize_endpoint, record_request_finished, record_request_started
@@ -32,6 +33,7 @@ configure_logging(settings.log_level)
 logger = get_logger("assignment2.api")
 deployment_metadata: DeploymentMetadataResponse | None = None
 backend_ready = False
+torch_runtime_configured = False
 
 
 def _clear_loaded_prediction_resources() -> None:
@@ -48,6 +50,31 @@ def _clear_loaded_prediction_resources() -> None:
     predict_module.mlp_checkpoint = None
     predict_module.mlp_model = None
     predict_module.mlp_device = None
+
+
+def _configure_torch_runtime() -> None:
+    global torch_runtime_configured
+
+    if torch_runtime_configured:
+        logger.info(
+            "PyTorch CPU runtime already configured: num_threads=%s num_interop_threads=%s",
+            torch.get_num_threads(),
+            torch.get_num_interop_threads(),
+        )
+        return
+
+    torch.set_num_threads(settings.mlp_torch_num_threads)
+    try:
+        torch.set_num_interop_threads(settings.mlp_torch_num_interop_threads)
+    except RuntimeError:
+        logger.warning("PyTorch interop thread count could not be changed because the runtime is already initialized.")
+
+    torch_runtime_configured = True
+    logger.info(
+        "Configured PyTorch CPU runtime: num_threads=%s num_interop_threads=%s",
+        torch.get_num_threads(),
+        torch.get_num_interop_threads(),
+    )
 
 
 @asynccontextmanager
@@ -71,13 +98,7 @@ async def lifespan(app: FastAPI):
             raise RuntimeError(
                 f"Metrics multiprocess mode is enabled but PROMETHEUS_MULTIPROC_DIR is not ready: {multiprocess_dir}"
             )
-    torch.set_num_threads(settings.mlp_torch_num_threads)
-    torch.set_num_interop_threads(settings.mlp_torch_num_interop_threads)
-    logger.info(
-        "Configured PyTorch CPU runtime: num_threads=%s num_interop_threads=%s",
-        torch.get_num_threads(),
-        torch.get_num_interop_threads(),
-    )
+    _configure_torch_runtime()
 
     feature_schema_path = settings.resolve_project_path(settings.feature_schema_path)
     model_metadata_path = settings.resolve_project_path(settings.model_metadata_path)
@@ -285,8 +306,8 @@ async def log_requests(request: Request, call_next):
 
 # Keep the original unversioned paths for backward compatibility while /api/v1/* is the formal contract.
 api_v1_router = APIRouter(prefix="/api/v1")
-app.include_router(predict_router)
-api_v1_router.include_router(predict_router)
+app.include_router(predict_router, dependencies=[Depends(require_api_key)])
+api_v1_router.include_router(predict_router, dependencies=[Depends(require_api_key)])
 
 
 def _build_health_response() -> dict[str, object]:
@@ -356,14 +377,19 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    if exc.status_code >= 500:
+    if exc.status_code == 401:
+        error_type = "unauthorized"
+        message = "Authentication required"
+        details = None
+    elif exc.status_code >= 500:
         error_type = "prediction_error"
         message = "Prediction failed"
+        details = exc.detail if isinstance(exc.detail, (list, dict)) else [exc.detail]
     else:
         error_type = "http_error"
         message = "Request could not be processed"
+        details = exc.detail if isinstance(exc.detail, (list, dict)) else [exc.detail]
 
-    details = exc.detail if isinstance(exc.detail, (list, dict)) else [exc.detail]
     return JSONResponse(
         status_code=exc.status_code,
         content=_build_error_response(
@@ -396,17 +422,17 @@ def health_v1() -> dict[str, object]:
     return _build_health_response()
 
 
-@app.get("/metadata", response_model=DeploymentMetadataResponse)
+@app.get("/metadata", response_model=DeploymentMetadataResponse, dependencies=[Depends(require_api_key)])
 def metadata() -> DeploymentMetadataResponse:
     return _ensure_deployment_metadata_loaded()
 
 
-@api_v1_router.get("/metadata", response_model=DeploymentMetadataResponse)
+@api_v1_router.get("/metadata", response_model=DeploymentMetadataResponse, dependencies=[Depends(require_api_key)])
 def metadata_v1() -> DeploymentMetadataResponse:
     return _ensure_deployment_metadata_loaded()
 
 
-@app.get("/metrics", include_in_schema=False)
+@app.get("/metrics", include_in_schema=False, dependencies=[Depends(require_api_key)])
 def metrics() -> Response:
     if not settings.metrics_enabled:
         raise HTTPException(status_code=404, detail="Not found")

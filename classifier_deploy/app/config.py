@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     log_level: str = "info"
+    api_auth_enabled: bool = True
+    api_key: str | None = None
     metrics_enabled: bool = True
     metrics_multiprocess_enabled: bool = False
     prometheus_multiproc_dir: str = "/tmp/prometheus-multiproc"
@@ -28,6 +31,16 @@ class Settings(BaseSettings):
     category_maps_path: str = "artifacts/category_maps.json"
     mlp_torch_num_threads: int = 1
     mlp_torch_num_interop_threads: int = 1
+
+    @model_validator(mode="after")
+    def validate_api_auth_configuration(self) -> "Settings":
+        if self.api_key is not None:
+            self.api_key = self.api_key.strip()
+
+        if self.api_auth_enabled and not self.api_key:
+            raise ValueError("API_KEY must be set when API_AUTH_ENABLED=true.")
+
+        return self
 
     def resolve_project_path(self, value: str) -> Path:
         path = Path(value)
