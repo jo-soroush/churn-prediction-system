@@ -47,8 +47,11 @@ jobs:
             exit 0
           }
 
-      - name: Run deterministic test baseline
-        run: python -m pytest tests/test_schema_consistency.py tests/test_artifacts.py::test_required_artifact_files_exist tests/test_artifact_integrity.py
+      - name: Run backend test suite
+        run: python -m pytest
+
+      - name: Validate frontend syntax
+        run: python -m py_compile frontend/app.py
 
   assignment-2-container-validation:
     name: Assignment 2 Container Validation
@@ -93,7 +96,6 @@ jobs:
             --env METRICS_MULTIPROCESS_ENABLED=true \
             --env PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc \
             --tmpfs /tmp/prometheus-multiproc:mode=1777 \
-            --volume "$PWD/artifacts:/app/artifacts:ro" \
             assignment2-api:ci
 
       - name: Wait for API readiness
