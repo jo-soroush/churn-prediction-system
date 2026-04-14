@@ -31,11 +31,31 @@ import app.predict as predict_module
 configure_logging(settings.log_level)
 logger = get_logger("assignment2.api")
 deployment_metadata: DeploymentMetadataResponse | None = None
+backend_ready = False
+
+
+def _clear_loaded_prediction_resources() -> None:
+    global deployment_metadata
+
+    deployment_metadata = None
+    predict_module.tree_feature_schema = None
+    predict_module.tree_preprocessor = None
+    predict_module.tree_model = None
+    predict_module.tree_shap_explainer = None
+    predict_module.tree_shap_status_message = None
+    predict_module.mlp_preprocessor = None
+    predict_module.mlp_category_maps = None
+    predict_module.mlp_checkpoint = None
+    predict_module.mlp_model = None
+    predict_module.mlp_device = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global deployment_metadata
+    global backend_ready
+
+    backend_ready = False
 
     logger.info("Application startup beginning")
     logger.info("API runtime configured: host=%s port=%s log_level=%s", settings.api_host, settings.api_port, settings.log_level)
@@ -89,8 +109,15 @@ async def lifespan(app: FastAPI):
 
     missing_paths = [str(path) for path in required_paths if not path.exists()]
     if missing_paths:
-        logger.error("Startup failed because required prediction artifacts are missing: %s", missing_paths)
-        raise FileNotFoundError(f"Missing required prediction artifacts: {missing_paths}")
+        logger.error(
+            "Prediction backend is not ready because required artifacts are missing: %s. "
+            "Application startup will continue; prediction endpoints will fail until artifacts are available and loaded.",
+            missing_paths,
+        )
+        _clear_loaded_prediction_resources()
+        yield
+        logger.info("Application shutdown complete")
+        return
 
     logger.info("Loading artifact: feature_schema path=%s", feature_schema_path)
     try:
