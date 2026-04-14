@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 
 DEFAULT_API_BASE_URL = os.getenv("FRONTEND_API_BASE_URL", "http://127.0.0.1:8000")
+FRONTEND_API_KEY = os.getenv("FRONTEND_API_KEY", "").strip()
 METADATA_ENDPOINT_PATH = "/metadata"
 MODEL_OPTIONS = {
     "Tree (XGBoost)": "/predict/tree",
@@ -129,6 +130,13 @@ def _build_error_message(response: requests.Response) -> str:
     return f"{error_type}: {error_message}"
 
 
+def _build_auth_headers() -> tuple[dict[str, str] | None, str | None]:
+    if not FRONTEND_API_KEY:
+        return None, "Frontend API key is not configured. Set FRONTEND_API_KEY before calling protected backend routes."
+
+    return {"X-API-Key": FRONTEND_API_KEY}, None
+
+
 def _render_result_field(label: str, value: object) -> None:
     st.caption(label)
     st.write(value)
@@ -137,10 +145,15 @@ def _render_result_field(label: str, value: object) -> None:
 def _run_prediction_request(
     api_base_url: str, endpoint_path: str, payload: dict[str, object]
 ) -> tuple[dict[str, object] | None, str | None]:
+    headers, configuration_error = _build_auth_headers()
+    if configuration_error is not None:
+        return None, configuration_error
+
     try:
         response = requests.post(
             f"{api_base_url}{endpoint_path}",
             json=payload,
+            headers=headers,
             timeout=15,
         )
     except requests.RequestException as error:
@@ -153,8 +166,12 @@ def _run_prediction_request(
 
 
 def _run_metadata_request(api_base_url: str) -> tuple[dict[str, object] | None, str | None]:
+    headers, configuration_error = _build_auth_headers()
+    if configuration_error is not None:
+        return None, configuration_error
+
     try:
-        response = requests.get(f"{api_base_url}{METADATA_ENDPOINT_PATH}", timeout=10)
+        response = requests.get(f"{api_base_url}{METADATA_ENDPOINT_PATH}", headers=headers, timeout=10)
     except requests.RequestException as error:
         return None, f"Could not reach the API: {error}"
 
