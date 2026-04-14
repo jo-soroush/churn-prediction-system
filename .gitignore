@@ -5,3 +5,5 @@ __pycache__/
 .env
 .env.*
 !classifier_deploy/.env.example
+classifier_deploy/secrets/*
+!classifier_deploy/secrets/.gitkeep
