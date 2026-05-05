@@ -2,6 +2,15 @@
 
 End-to-end machine learning system for predicting telecom customer churn, served through a FastAPI backend and a Streamlit frontend. The project packages model training outputs, inference APIs, authentication, containers, CI validation, registry publishing, and cloud deployment into a portfolio-ready ML product prototype.
 
+## Live Demo
+
+The active cloud deployment runs on AWS EC2.
+
+- Frontend application: `http://13.53.132.103:8501`
+- Backend health check: `http://13.53.132.103:8000/health`
+
+The Streamlit frontend is the intended public entry point for the system. Backend prediction, metadata, and metrics endpoints remain protected and require `X-API-Key`.
+
 ## 1. Project Overview
 
 Customer churn prediction helps retention teams identify accounts that are likely to cancel service before the cancellation happens. The business value is prioritization: a reviewer can enter a customer profile, receive a churn probability, compare two deployed model families, and use the result to guide follow-up decisions.
@@ -24,12 +33,6 @@ User
   -> Preprocessing + model inference
   -> Structured prediction response
 ```
-
-Live deployment:
-
-- Frontend: `https://assignment2-frontend-yugh.onrender.com`
-- Backend health: `https://assignment2-api-3615.onrender.com/health`
-- API docs: `https://assignment2-api-3615.onrender.com/docs`
 
 ## 2. Architecture
 
@@ -164,31 +167,21 @@ Local services:
 
 The Compose file also includes Prometheus and Grafana configuration assets for local monitoring.
 
-### 6.2 Render
+### 6.2 AWS EC2
 
-The Render deployment uses separate public services:
+AWS EC2 is the active cloud deployment. The deployment is designed for a single instance running Docker Compose from `classifier_deploy/`, using the same containerized API and frontend services validated by CI.
 
-- A frontend service running the Streamlit app
-- An API service running the FastAPI backend
+Active endpoints:
 
-The frontend service is public. It calls the API service using the configured backend URL and `FRONTEND_API_KEY`. The API exposes public health checks while keeping prediction, metadata, and metrics routes protected by `X-API-Key`.
-
-Current Render endpoints:
-
-- Frontend: `https://assignment2-frontend-yugh.onrender.com`
-- API health: `https://assignment2-api-3615.onrender.com/health`
-- API docs: `https://assignment2-api-3615.onrender.com/docs`
-
-### 6.3 AWS EC2
-
-The EC2 deployment is designed for a single instance running Docker Compose from `classifier_deploy/`.
+- Frontend application: `http://13.53.132.103:8501`
+- Backend health check: `http://13.53.132.103:8000/health`
 
 Minimal setup:
 
 1. Provision an EC2 instance with Docker and Docker Compose.
-2. Copy or clone the repository onto the instance.
+2. Pull the published GHCR images or build from the repository on the instance.
 3. Configure `.env` with `API_KEY`, `FRONTEND_API_KEY`, and service URLs.
-4. Start the stack from `classifier_deploy/` with `docker compose up --build -d`.
+4. Start the stack from `classifier_deploy/` with `docker compose up -d`.
 
 Ports:
 
@@ -217,6 +210,7 @@ The pipeline includes:
 - Authenticated checks for `/predict/tree`, `/predict/mlp`, and `/metrics`
 - Public health check validation for `/health`
 - GHCR publishing on `main`
+- Image delivery for AWS EC2 Docker Compose deployment
 
 Published images:
 
@@ -250,7 +244,7 @@ Open:
 cd classifier_deploy
 cp .env.example .env
 # Set API_KEY, FRONTEND_API_KEY, and public/private service URLs for the instance.
-docker compose up --build -d
+docker compose up -d
 ```
 
 Then verify:
@@ -441,4 +435,4 @@ Screenshots and project artifacts are available under `project_docs/`, including
 - Containers: Docker, Docker Compose
 - CI/CD: GitHub Actions
 - Registry: GitHub Container Registry
-- Deployments: Render, AWS EC2
+- Deployments: AWS EC2, Docker Compose
