@@ -1,370 +1,444 @@
-# Telecom Customer Churn Risk Predictor
+# Telecom Customer Churn Prediction System
 
-## A Production-Style AI Decision-Support System for Customer Retention
+End-to-end machine learning system for predicting telecom customer churn, served through a FastAPI backend and a Streamlit frontend. The project packages model training outputs, inference APIs, authentication, containers, CI validation, registry publishing, and cloud deployment into a portfolio-ready ML product prototype.
 
----
+## 1. Project Overview
 
-## Overview
+Customer churn prediction helps retention teams identify accounts that are likely to cancel service before the cancellation happens. The business value is prioritization: a reviewer can enter a customer profile, receive a churn probability, compare two deployed model families, and use the result to guide follow-up decisions.
 
-**Telecom Customer Churn Risk Predictor** is a deployable AI-powered decision-support system designed to estimate the likelihood of customer churn in a telecom context.
+This repository demonstrates the full path from trained tabular models to a deployable application:
 
-The system transforms structured customer data into actionable churn-risk insight through a fully integrated workflow that includes:
+- A FastAPI service exposes prediction, metadata, health, and metrics endpoints.
+- Two inference models are available behind the same input contract: XGBoost and a PyTorch MLP with embeddings.
+- A Streamlit frontend provides single-model and comparison workflows for user interaction.
+- API key authentication protects inference, metadata, and metrics routes.
+- Docker Compose runs the API and frontend locally or on a single EC2 instance.
+- GitHub Actions validates tests, containers, authenticated endpoint checks, and GHCR publishing.
 
-- tabular machine learning models
-- a backend inference API
-- a user-facing review interface
-- model explainability support
-- monitoring and validation infrastructure
-- CI/CD-backed container delivery
-- live cloud deployment
+High-level flow:
 
-This project goes beyond a typical machine learning notebook and demonstrates how a churn prediction workflow can be packaged into a **usable, observable, and deployable AI product prototype**.
+```text
+User
+  -> Streamlit frontend
+  -> FastAPI backend
+  -> Preprocessing + model inference
+  -> Structured prediction response
+```
 
----
+Live deployment:
 
-## Live Deployment
+- Frontend: `https://assignment2-frontend-yugh.onrender.com`
+- Backend health: `https://assignment2-api-3615.onrender.com/health`
+- API docs: `https://assignment2-api-3615.onrender.com/docs`
 
-- **Frontend:**  
-  `https://assignment2-frontend-yugh.onrender.com`
+## 2. Architecture
 
-- **Backend Health Endpoint:**  
-  `https://assignment2-api-3615.onrender.com/health`
+### Backend: FastAPI
 
-- **API Documentation:**  
-  `https://assignment2-api-3615.onrender.com/docs`
+The backend lives under `classifier_deploy/app/` and serves the production-style inference contract. It loads model artifacts at startup, validates request payloads, applies preprocessing, runs inference, returns structured responses, and exports Prometheus-compatible metrics.
 
----
+The API supports both unversioned routes and `/api/v1/*` routes. The unversioned routes are retained for compatibility; `/api/v1/*` is the formal versioned contract.
 
-## Demo Screenshots
+### Frontend: Streamlit
 
-### Tree Model Prediction Result
-![Tree model prediction result](project_docs/screenshots/tree_single_prediction_result.png)
+The frontend lives under `classifier_deploy/frontend/`. It provides a form-based workflow for entering telecom customer attributes and calling the backend with `X-API-Key`. It supports:
 
-### Compare Mode Result
-![Compare mode result](project_docs/screenshots/compare_mode_result.png)
+- Tree model prediction
+- MLP prediction
+- Side-by-side model comparison
+- Model metadata display
+- Tree model contribution display when SHAP output is available
 
-### API Documentation
-![Deployed API docs](project_docs/screenshots/deployed_api_docs.png)
+### Model Layer
 
-### Final Model Metrics Table
-![Notebook final model metrics table](project_docs/screenshots/notebook_final_model_metrics_table.png)
+The model layer uses exported artifacts from the training workflow:
 
-### SHAP Summary Plot
-![SHAP summary plot](project_docs/screenshots/shap_summary.png)
+- `xgb_model.json`
+- `tree_preprocessor.pkl`
+- `mlp_model.pt`
+- `mlp_preprocessor.pkl`
+- `category_maps.json`
+- `feature_schema.json`
+- `model_metadata.json`
 
-### GitHub Actions Workflow History
-![GitHub Actions workflow history](project_docs/screenshots/github_actions_workflow_history.png)
+Artifacts are mounted into the API container as read-only files in Docker Compose.
 
----
+### Communication Flow
 
-## Business Problem
+```text
+Streamlit UI
+  -> POST /predict/tree or /predict/mlp
+  -> FastAPI validates X-API-Key
+  -> FastAPI validates request schema
+  -> Model-specific preprocessing
+  -> XGBoost or PyTorch inference
+  -> JSON response with probability, label, metadata, and explanation status
+```
 
-Customer churn is costly, but retention teams usually have limited time and budget. In practice, the important business question is not only:
+## 3. Models
 
-> “Will this customer churn?”
+### Tree Model: XGBoost
 
-It is also:
+The XGBoost model is the deployed tree-based model. It uses the tree preprocessing pipeline and returns:
 
-> “Which customer profiles should be reviewed first, and how should risk be communicated clearly and responsibly?”
+- Churn label derived from a probability threshold
+- Churn probability
+- Contract and schema metadata
+- SHAP-based feature contribution details when the SHAP runtime is available
 
-This system addresses that problem by providing a deployable churn-risk workflow that lets a reviewer:
+### Neural Model: PyTorch MLP with Embeddings
 
-- enter a single customer profile
-- score that profile with either deployed model
-- compare both deployed models on the same input
-- review a bounded probability-based summary
-- inspect tree-model feature contribution details
-- use the result as support for manual follow-up
-
----
-
-## Key Features
-
-### Prediction System
-- Binary churn classification
-- Probability-based output
-- Threshold-based label generation
-- Shared schema across deployed models
-
-### Dual Model Architecture
-- **XGBoost**
-  - primary deployed tree-based model
-  - supports runtime explainability
-- **PyTorch MLP with embeddings**
-  - deployed neural model
-  - supports mixed categorical and numerical input
-- **RandomForest baseline**
-  - retained as an evaluation artifact
-  - not exposed as a deployed endpoint
+The neural endpoint serves a PyTorch multilayer perceptron designed for mixed tabular input. Categorical features are encoded through embeddings, numeric features are normalized through the MLP preprocessing path, and the output is converted to a churn probability.
 
 ### Explainability
-- SHAP-based feature contribution for the tree model
-- Top feature drivers returned per prediction
-- Clear distinction between explainable and non-explainable deployed paths
 
-### API Design
-- FastAPI backend
-- Versioned and unversioned endpoints
-- Structured response contract
-- Metadata, health, and metrics endpoints
+Tree-model explainability is implemented with SHAP. The API returns the top feature contributions for the tree endpoint, including direction and contribution value.
 
-### Security
-- API key authentication using `X-API-Key`
-- Protected prediction, metadata, and metrics routes
-- Public health endpoints
+The MLP endpoint does not expose feature-level explanations. Its response explicitly marks feature-level explanation as unavailable so consumers do not confuse a probability score with an interpretable feature attribution.
 
-### User Interface
-- Streamlit-based frontend
-- Single-model and compare-mode workflows
-- Structured customer profile form
-- Model metadata and interpretation display
-- Tree feature contribution display
+## 4. Security
 
-### Monitoring and Validation
-- Prometheus metrics endpoint
-- Grafana dashboard assets
-- Request, latency, and error tracking
-- Load testing with Locust
-- Automated pytest coverage
-- Artifact integrity validation
+The backend uses service-level API key authentication through the `X-API-Key` header.
 
-### Deployment and Delivery
-- Dockerized services
-- Docker Compose local orchestration
-- GitHub Actions CI pipeline
-- GHCR image publishing
-- Render cloud deployment
+Protected endpoints require a valid API key:
 
----
+- `/predict/tree`
+- `/predict/mlp`
+- `/metadata`
+- `/metrics`
+- The corresponding `/api/v1/*` routes
 
-## System Architecture
+Public endpoints:
 
-    User (Streamlit UI)
-            ↓
-    Frontend (Streamlit App)
-            ↓
-    Backend API (FastAPI)
-            ↓
-    Model Layer (XGBoost / MLP)
-            ↓
-    Artifacts (preprocessors, schema, metadata)
+- `/health`
+- `/api/v1/health`
 
-Additional layers:
+`/health` is public by design because it is used by container health checks, deployment platforms, and uptime checks. It reports service readiness without exposing prediction capability or customer-level data.
 
-- Monitoring: Prometheus + Grafana
-- Validation: pytest + Locust + artifact checks
-- Delivery: GitHub Actions + GHCR + Render
+This project does not implement user accounts, roles, sessions, or OAuth. Authentication is service-level protection for API access.
 
----
+## 5. API Endpoints
 
-## Model Performance Summary
+| Method | Endpoint | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/health` | Public | Runtime readiness and artifact load status |
+| `POST` | `/predict/tree` | Protected | XGBoost churn prediction with SHAP explanation when available |
+| `POST` | `/predict/mlp` | Protected | PyTorch MLP churn prediction |
+| `GET` | `/metadata` | Protected | Deployment, schema, model, and runtime metadata |
+| `GET` | `/metrics` | Protected | Prometheus-compatible API and model metrics |
 
-The notebook workflow compares three models:
+Versioned equivalents are available under `/api/v1`, for example `/api/v1/predict/tree`.
 
-- **XGBoost** as the main tree-based model
-- **PyTorch MLP with embeddings** as the main neural model
-- **RandomForest** as the baseline
+Protected requests must include:
 
-Based on the saved notebook outputs and exported artifacts:
+```http
+X-API-Key: <your_api_key>
+```
 
-- XGBoost achieved the strongest overall product-facing performance
-- the MLP remained competitive as a second deployed inference path
-- RandomForest was retained as a comparison baseline
-- SHAP analysis highlighted features such as contract, tenure, monthly charges, and online security as meaningful churn-related drivers
+## 6. Deployment
 
----
+### 6.1 Docker / Local
 
-## Example API Request
+The Docker deployment files are in `classifier_deploy/`.
 
-    curl -X POST "https://assignment2-api-3615.onrender.com/predict/tree" \
-      -H "Content-Type: application/json" \
-      -H "X-API-Key: YOUR_API_KEY" \
-      -d '{
-        "gender": "Female",
-        "seniorcitizen": 0,
-        "partner": "Yes",
-        "dependents": "No",
-        "tenure": 12,
-        "phoneservice": "Yes",
-        "multiplelines": "No",
-        "internetservice": "DSL",
-        "onlinesecurity": "No",
-        "onlinebackup": "Yes",
-        "deviceprotection": "No",
-        "techsupport": "No",
-        "streamingtv": "No",
-        "streamingmovies": "No",
-        "contract": "Month-to-month",
-        "paperlessbilling": "Yes",
-        "paymentmethod": "Electronic check",
-        "monthlycharges": 70.35,
-        "totalcharges": 845.5
-      }'
+```bash
+cd classifier_deploy
+cp .env.example .env
+docker compose up --build
+```
 
----
+Required environment variables:
 
-## Example API Response
+- `API_KEY`: backend API key for protected routes
+- `FRONTEND_API_KEY`: key used by the Streamlit frontend when calling the backend
+- `FRONTEND_API_BASE_URL`: backend URL used by the frontend
 
-    {
-      "request": {
-        "request_id": "bc52457d-43ae-405f-b4ab-98a487c37cdb",
-        "timestamp_utc": "2026-04-15T10:48:40Z"
-      },
-      "contract": {
-        "contract_version": "v2",
-        "schema_version": "telco_churn_schema_v1"
-      },
-      "model": {
-        "model_key": "tree",
-        "model_name": "XGBoost",
-        "model_family": "xgboost",
-        "artifact_set": "active"
-      },
-      "prediction_result": {
-        "label": "positive",
-        "probability": 0.508867,
-        "threshold": 0.5,
-        "threshold_rule": "probability >= threshold => positive"
-      },
-      "interpretation_basis": {
-        "label_source": "thresholded_probability",
-        "feature_level_explanation_available": true
-      },
-      "explanation": {
-        "available": true,
-        "method": "shap_tree",
-        "top_features": [
-          {
-            "feature": "contract",
-            "direction": "increases_churn_score"
-          },
-          {
-            "feature": "monthlycharges",
-            "direction": "decreases_churn_score"
-          },
-          {
-            "feature": "internetservice",
-            "direction": "decreases_churn_score"
-          }
-        ]
-      }
-    }
+For local Compose networking, the default `FRONTEND_API_BASE_URL=http://api:8000` is used inside the frontend container. The `.env.example` file documents the artifact paths and runtime settings.
 
----
-
-## Repository Structure
-
-    .
-    ├── README.md
-    ├── tabular.ipynb
-    ├── classifier_deploy/
-    │   ├── app/
-    │   ├── artifacts/
-    │   ├── artifact_versions/
-    │   ├── docker/
-    │   ├── frontend/
-    │   ├── tests/
-    │   ├── docker-compose.yml
-    │   └── README.md
-    ├── project_docs/
-    │   └── screenshots/
-    └── notes/
-
----
-
-## Technical Documentation
-
-Detailed deployment and implementation documentation is available in:
-
-`classifier_deploy/README.md`
-
-That README covers:
-
-- backend and frontend implementation details
-- endpoints
-- environment variables
-- Docker usage
-- monitoring
-- testing
-- deployment-oriented workflow details
-
----
-
-## Running Locally
-
-### 1. Clone Repository
-
-    git clone https://github.com/jo-soroush/churn-prediction-system.git
-    cd churn-prediction-system/classifier_deploy
-
-### 2. Configure Environment Variables
-
-    API_KEY=your_key
-    FRONTEND_API_KEY=your_key
-
-### 3. Run with Docker Compose
-
-    docker compose up --build
-
-### 4. Access Services
+Local services:
 
 - Frontend: `http://localhost:8501`
 - API: `http://localhost:8000`
 - API docs: `http://localhost:8000/docs`
+- Metrics: `http://localhost:8000/metrics` with `X-API-Key`
 
----
+The Compose file also includes Prometheus and Grafana configuration assets for local monitoring.
+
+### 6.2 Render
+
+The Render deployment uses separate public services:
+
+- A frontend service running the Streamlit app
+- An API service running the FastAPI backend
+
+The frontend service is public. It calls the API service using the configured backend URL and `FRONTEND_API_KEY`. The API exposes public health checks while keeping prediction, metadata, and metrics routes protected by `X-API-Key`.
+
+Current Render endpoints:
+
+- Frontend: `https://assignment2-frontend-yugh.onrender.com`
+- API health: `https://assignment2-api-3615.onrender.com/health`
+- API docs: `https://assignment2-api-3615.onrender.com/docs`
+
+### 6.3 AWS EC2
+
+The EC2 deployment is designed for a single instance running Docker Compose from `classifier_deploy/`.
+
+Minimal setup:
+
+1. Provision an EC2 instance with Docker and Docker Compose.
+2. Copy or clone the repository onto the instance.
+3. Configure `.env` with `API_KEY`, `FRONTEND_API_KEY`, and service URLs.
+4. Start the stack from `classifier_deploy/` with `docker compose up --build -d`.
+
+Ports:
+
+- API container: `8000`
+- Streamlit frontend: `8501`
+
+Security group requirements:
+
+- Allow inbound access to `8501` for the frontend if it is intended to be public.
+- Allow inbound access to `8000` only when the API should be reachable directly.
+- Keep SSH restricted to trusted IPs.
+- In a stricter setup, expose only the frontend and keep the API private to the instance or VPC.
+
+## 7. CI/CD
+
+GitHub Actions is defined in `.github/workflows/ci.yml`.
+
+The pipeline includes:
+
+- Python dependency installation
+- Full backend test suite with `pytest`
+- Streamlit frontend syntax validation
+- API container build validation
+- Frontend container build validation
+- Runtime smoke checks against the built API image
+- Authenticated checks for `/predict/tree`, `/predict/mlp`, and `/metrics`
+- Public health check validation for `/health`
+- GHCR publishing on `main`
+
+Published images:
+
+- `ghcr.io/<repo>/assignment2-api`
+- `ghcr.io/<repo>/assignment2-frontend`
+
+Tagging strategy:
+
+- `main`: latest validated image from the main branch
+- `sha-<short_sha>`: immutable commit-specific image tag
+
+## 8. How to Run
+
+### Local
+
+```bash
+cd classifier_deploy
+cp .env.example .env
+# Edit API_KEY and FRONTEND_API_KEY so both values match.
+docker compose up --build
+```
+
+Open:
+
+- `http://localhost:8501` for the Streamlit frontend
+- `http://localhost:8000/docs` for API documentation
+
+### EC2
+
+```bash
+cd classifier_deploy
+cp .env.example .env
+# Set API_KEY, FRONTEND_API_KEY, and public/private service URLs for the instance.
+docker compose up --build -d
+```
+
+Then verify:
+
+```bash
+curl http://<ec2-host>:8000/health
+```
+
+## 9. Example Usage
+
+Sample prediction request:
+
+```bash
+curl -X POST "http://localhost:8000/predict/tree" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "gender": "Female",
+    "seniorcitizen": 0,
+    "partner": "Yes",
+    "dependents": "No",
+    "tenure": 24,
+    "phoneservice": "Yes",
+    "multiplelines": "No",
+    "internetservice": "Fiber optic",
+    "onlinesecurity": "No",
+    "onlinebackup": "Yes",
+    "deviceprotection": "Yes",
+    "techsupport": "No",
+    "streamingtv": "Yes",
+    "streamingmovies": "No",
+    "contract": "One year",
+    "paperlessbilling": "Yes",
+    "paymentmethod": "Bank transfer (automatic)",
+    "monthlycharges": 79.9,
+    "totalcharges": 1917.6
+  }'
+```
+
+Tree response shape:
+
+```json
+{
+  "request": {
+    "request_id": "bc52457d-43ae-405f-b4ab-98a487c37cdb",
+    "timestamp_utc": "2026-04-15T10:48:40Z"
+  },
+  "contract": {
+    "contract_version": "v2",
+    "schema_version": "telco_churn_schema_v1"
+  },
+  "model": {
+    "model_key": "tree",
+    "model_name": "XGBoost",
+    "model_family": "xgboost",
+    "artifact_set": "active"
+  },
+  "prediction_result": {
+    "label": "positive",
+    "probability": 0.508867,
+    "threshold": 0.5,
+    "threshold_rule": "probability >= threshold => positive"
+  },
+  "interpretation_basis": {
+    "label_source": "thresholded_probability",
+    "feature_level_explanation_available": true,
+    "notes": [
+      "The returned label is derived from the model probability using the current threshold rule."
+    ]
+  },
+  "explanation": {
+    "available": true,
+    "method": "shap_tree",
+    "top_features": [
+      {
+        "feature": "contract",
+        "display_name": "Contract",
+        "shap_value": 0.535769,
+        "direction": "increases_churn_score"
+      }
+    ]
+  }
+}
+```
+
+MLP request uses the same payload:
+
+```bash
+curl -X POST "http://localhost:8000/predict/mlp" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  --data @classifier_deploy/artifacts/sample_input.json
+```
+
+MLP response shape:
+
+```json
+{
+  "model": {
+    "model_key": "mlp",
+    "model_name": "PyTorch MLP with embeddings",
+    "model_family": "pytorch_mlp",
+    "artifact_set": "active"
+  },
+  "prediction_result": {
+    "label": "negative",
+    "probability": 0.312451,
+    "threshold": 0.5,
+    "threshold_rule": "probability >= threshold => positive"
+  },
+  "interpretation_basis": {
+    "label_source": "thresholded_probability",
+    "feature_level_explanation_available": false
+  },
+  "explanation": {
+    "available": false,
+    "method": null,
+    "top_features": [],
+    "notes": [
+      "Feature-level explanation is not available for the deployed MLP endpoint."
+    ]
+  }
+}
+```
+
+The numeric probabilities shown above are example values. Runtime values depend on the active model artifacts.
+
+## 10. Limitations
+
+- MLP feature-level explainability is not implemented in the deployed API.
+- The project uses service-level API key authentication, not user-level authentication.
+- The Streamlit frontend is a prototype interface, not a full production retention console.
+- There is no CRM integration, batch scoring workflow, or persistence layer.
+- Secrets and deployment environment settings are managed outside the repository.
+- The current deployment pattern is suitable for a portfolio system and small demos, not high-scale enterprise traffic.
+
+## 11. Future Work
+
+- Add rate limiting for protected API routes.
+- Add user-level authentication and authorization.
+- Add monitoring dashboards for model drift, data quality, latency, and error budgets.
+- Add a scheduled model retraining and evaluation pipeline.
+- Add batch prediction and export workflows.
+- Add deployment promotion stages between development, staging, and production.
+
+## Repository Structure
+
+```text
+.
+|-- README.md
+|-- tabular.ipynb
+|-- classifier_deploy/
+|   |-- app/
+|   |-- artifacts/
+|   |-- artifact_versions/
+|   |-- docker/
+|   |-- frontend/
+|   |-- tests/
+|   |-- docker-compose.yml
+|   `-- README.md
+|-- project_docs/
+|   `-- screenshots/
+`-- notes/
+```
+
+## Supporting Documentation
+
+Detailed implementation and deployment notes are available in `classifier_deploy/README.md`.
+
+Screenshots and project artifacts are available under `project_docs/`, including:
+
+- Tree model prediction result
+- Compare mode result
+- Deployed API docs
+- Final model metrics table
+- SHAP summary plot
+- GitHub Actions workflow history
 
 ## Tech Stack
 
-- **Backend:** FastAPI
-- **Frontend:** Streamlit
-- **Models:** XGBoost, PyTorch, RandomForest
-- **Explainability:** SHAP
-- **Data Science:** pandas, scikit-learn, matplotlib, seaborn
-- **Monitoring:** Prometheus, Grafana
-- **Testing:** pytest, Locust
-- **Containers:** Docker, Docker Compose
-- **CI/CD:** GitHub Actions
-- **Registry:** GHCR
-- **Deployment:** Render
-
----
-
-## Limitations
-
-- No database persistence layer
-- No CRM or external system integration
-- No user login or role system
-- No batch prediction workflow
-- No automated retraining pipeline
-- No feature-level explanation for the deployed MLP model
-- Some deployment settings and secrets are managed externally
-- The system is a serious prototype, not a full enterprise retention platform
-
----
-
-## Why This Project Matters
-
-Many machine learning projects stop at the notebook stage. This project goes further by showing how a tabular churn workflow can become a **real AI product prototype** with:
-
-- deployable model serving
-- structured API design
-- explainability
-- monitoring
-- UI-based interaction
-- testing
-- CI/CD
-- cloud-hosted delivery
-
-It is designed as a **portfolio-grade system** that bridges machine learning and real-world product engineering.
-
----
-
-## Final Note
-
-This repository contains both the **product-facing project view** and the **deployment-focused technical implementation**.
-
-- The root `README.md` presents the project at a portfolio and system level
-- `classifier_deploy/README.md` provides the technical implementation and deployment details
-
-Together, they show how a machine learning solution can evolve from modeling work into a structured, observable, and deployable AI system.
+- Backend: FastAPI
+- Frontend: Streamlit
+- Models: XGBoost, PyTorch MLP with embeddings
+- Explainability: SHAP for the tree endpoint
+- Data tooling: pandas, scikit-learn
+- Monitoring: Prometheus, Grafana
+- Testing: pytest
+- Containers: Docker, Docker Compose
+- CI/CD: GitHub Actions
+- Registry: GitHub Container Registry
+- Deployments: Render, AWS EC2
